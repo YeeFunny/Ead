@@ -1,20 +1,12 @@
-import java.io.*;
-import java.util.regex.Pattern;
-
-import javax.xml.parsers.*;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
+import org.apache.commons.text.StringEscapeUtils;
 
 public class TestReadXMLFiles {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		
-		
+		String xml = "&amp;lt;a&gt;";
+		String unxml = StringEscapeUtils.unescapeHtml3(xml);
+		System.out.print("Unescaped: " + unxml);
 	}
 
 }
