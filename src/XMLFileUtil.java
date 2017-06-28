@@ -43,11 +43,11 @@ public class XMLFileUtil {
 		{"times", "\u00D7"},	{"divide", "\u00F7"}
 	};
 	private static final HashMap<String, String> lookupMap;
-    static {
-        lookupMap = new HashMap<String, String>();
-        for (final CharSequence[] seq : ESCAPES) 
-            lookupMap.put(seq[0].toString(), seq[1].toString());
-    }
+	static {
+	    lookupMap = new HashMap<String, String>();
+	    for (final CharSequence[] seq : ESCAPES) 
+	        lookupMap.put(seq[0].toString(), seq[1].toString());
+	}
 	
 	// Filter XML files
 	private FileFilter xmlFilter = new FileFilter() {
