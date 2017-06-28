@@ -42,16 +42,16 @@ public class XMLFileUtil {
 	/**
 	 * Get all XML files in the specified directory
 	 * 
-	 * @param sourcePath
+	 * @param sourceDir
 	 * 	Path of the input directory
 	 * 	
 	 * @return
 	 * 	An arrayList with all XML files in the directory
 	 */
-	public ArrayList<File> getXMLFiles(String sourcePath) {
+	public ArrayList<File> getXMLFiles(String sourceDir) {
 		
 		ArrayList<File> fileList = new ArrayList<File>();
-		File file = new File(sourcePath);
+		File file = new File(sourceDir);
 		
 		if (file.isDirectory()) {
 			File[] files = file.listFiles(xmlFilter);
@@ -69,40 +69,27 @@ public class XMLFileUtil {
 	 * Update date tag, replace year-00-00 with year-01-01
 	 * 
 	 * @param xmlFile
-	 * @param targetPath
 	 */
-	public void updateDate(File xmlFile, String targetPath) {
-		try {
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder builder = factory.newDocumentBuilder();
-			Document doc = builder.parse(xmlFile);
-			
-			String dateExpression = "00-00$";
-			Pattern pattern = Pattern.compile(dateExpression);
-			NodeList dateList = doc.getElementsByTagName("date");
-			
-			for (int i = 0; i < dateList.getLength(); i++) {
-				Node dateNode = dateList.item(i);
-				if (dateNode.getNodeType() == Node.ELEMENT_NODE) {
-					String dateValue = dateNode.getTextContent().trim();
-					NamedNodeMap dateAttrs = dateNode.getAttributes();
-					Node normalAttr = dateAttrs.getNamedItem("normal");
-					String normalValue = normalAttr.getTextContent().trim();
-					if (pattern.matcher(dateValue).find())
-						dateNode.setTextContent(dateValue.replace("00-00", "01-01"));
-					if (pattern.matcher(normalValue).find())
-						normalAttr.setTextContent(normalValue.replace("00-00", "01-01"));
-				}
+	public Document replaceDate(Document doc) {
+		
+		String dateExpression = "00-00$";
+		Pattern pattern = Pattern.compile(dateExpression);
+		NodeList dateList = doc.getElementsByTagName("date");
+		
+		for (int i = 0; i < dateList.getLength(); i++) {
+			Node dateNode = dateList.item(i);
+			if (dateNode.getNodeType() == Node.ELEMENT_NODE) {
+				String dateValue = dateNode.getTextContent().trim();
+				NamedNodeMap dateAttrs = dateNode.getAttributes();
+				Node normalAttr = dateAttrs.getNamedItem("normal");
+				String normalValue = normalAttr.getTextContent().trim();
+				if (pattern.matcher(dateValue).find())
+					dateNode.setTextContent(dateValue.replace("00-00", "01-01"));
+				if (pattern.matcher(normalValue).find())
+					normalAttr.setTextContent(normalValue.replace("00-00", "01-01"));
 			}
-			XMLFileUtil.outputXMLFile(doc, targetPath);
-			
-		} catch (ParserConfigurationException pcException) {
-			pcException.printStackTrace();
-		} catch (SAXException saxException) {
-			saxException.printStackTrace();
-		} catch (IOException ioException) {
-			ioException.printStackTrace();
 		}
+		return doc;
 	}
 	
 	/**
@@ -110,11 +97,12 @@ public class XMLFileUtil {
 	 * 
 	 * @param xmlFile
 	 * @param sourcePath
-	 * @param targetPath
 	 */
-	public void replaceHTMLEntity(File xmlFile, String sourcePath, String targetPath) {
+	public Document replaceHTMLEntity(File xmlFile, String sourcePath) {
+		
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		Document doc = null;
 		try {
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder = factory.newDocumentBuilder();
 			
 			String xmlStr = XMLFileUtil.getXMLStr(sourcePath);
@@ -125,9 +113,7 @@ public class XMLFileUtil {
 			
 			InputSource inputSource = new InputSource();
 			inputSource.setCharacterStream(new StringReader(xmlStr));
-			Document doc = builder.parse(inputSource);
-			
-			XMLFileUtil.outputXMLFile(doc, targetPath);
+			doc = builder.parse(inputSource);
 			
 		} catch (ParserConfigurationException pcException) {
 			pcException.printStackTrace();
@@ -136,10 +122,14 @@ public class XMLFileUtil {
 		} catch (IOException ioException) {
 			ioException.printStackTrace();
 		}
+		return doc;
 	}
 	
-	public void replceHTMLTag (File xmlFile) {
+	public void replceHTMLTag (Document doc) {
+			
+		NodeList linkList = doc.getElementsByTagName("a");
 		
+		System.out.println("Link length: " + linkList.getLength());	
 	}
 	
 	/**
@@ -168,10 +158,9 @@ public class XMLFileUtil {
 	 * 	Path of the source XML file
 	 * @return boolean
 	 */
-	private static boolean checkHTMLEntity(String sourcePath) {
+	private static boolean checkHTMLEntity(String xmlStr) {
 		
 		boolean hasHTMLEntity = false;
-		String xmlStr = XMLFileUtil.getXMLStr(sourcePath);
 		String htmlExpression = "&[a-zA-Z]{1,10};";
 		Pattern pattern = Pattern.compile(htmlExpression);
 		Matcher matcher = pattern.matcher(xmlStr);
@@ -185,14 +174,14 @@ public class XMLFileUtil {
 	/**
 	 * Output XML file
 	 * @param doc
-	 * @param filePath
+	 * @param targetPath
 	 */
-	private static void outputXMLFile(Document doc, String sourcePath) {
+	static void outputXMLFile(Document doc, String targetPath) {
 		try {
 			TransformerFactory transformerFactory = TransformerFactory.newInstance();
 			Transformer transformer = transformerFactory.newTransformer();
 			DOMSource source = new DOMSource(doc);
-			StreamResult result = new StreamResult(new File(sourcePath));
+			StreamResult result = new StreamResult(new File(targetPath));
 			
 			transformer.transform(source, result);
 			
