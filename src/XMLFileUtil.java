@@ -152,7 +152,6 @@ public class XMLFileUtil {
 				matcher.reset(xmlStr);
 			}
 		}
-		xmlStr = xmlStrBuilder.toString();
 		return xmlStr;
 	}
 	
