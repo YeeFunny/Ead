@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,7 +20,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -28,6 +28,26 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 public class XMLFileUtil {
+	
+	// HTML 3.0 Entities, including &amp;
+	private static final String[][] ESCAPES = {
+		{"quot", "\""},		  {"lt", "<"},		   {"gt", ">"},
+		{"amp", "&"},		  {"nbsp", "\u00A0"},  {"iexcl", "\u00A1"},
+		{"cent", "\u00A2"},   {"pound", "\u00A3"}, {"curren", "\u00A4"},
+		{"yen", "\u00A5"},	  {"sect", "\u00A7"},  {"uml", "\u00A8"},
+		{"copy", "\u00A9"},   {"ordf", "\u00AA"},  {"ordm", "\u00BA"},
+		{"not", "\u00ac"},	  {"shy", "\u00AD"},   {"reg", "\u00AE"},
+		{"macr", "\u00AF"},	  {"deg", "\u00B0"},   {"plusmn", "\u00B1"},
+		{"acute", "\u00B4"},  {"micro", "\u00B5"}, {"para", "\u00B6"},
+		{"middot", "\u00B7"}, {"cedil", "\u00B8"}, {"iquest", "\u00BF"},
+		{"times", "\u00D7"},  {"divide", "\u00F7"}
+	};
+	private static final HashMap<String, String> lookupMap;
+    static {
+        lookupMap = new HashMap<String, String>();
+        for (final CharSequence[] seq : ESCAPES) 
+            lookupMap.put(seq[0].toString(), seq[1].toString());
+    }
 	
 	// Filter XML files
 	private FileFilter xmlFilter = new FileFilter() {
@@ -38,7 +58,7 @@ public class XMLFileUtil {
 				return false;
 		}
 	};
-	
+
 	/**
 	 * Get all XML files in the specified directory
 	 * 
@@ -64,16 +84,35 @@ public class XMLFileUtil {
 		return fileList;
 	}
 	
+	/**
+	 * Convert XML file to String
+	 * 
+	 * @param sourcePath
+	 * 	Path of the source XML file
+	 * @return String
+	 */
+	public String getXMLStr(String sourcePath) {
+		
+		Path path = Paths.get(sourcePath);
+		String xmlStr = "";
+		try {
+			xmlStr = new String(Files.readAllBytes(path), "utf8");
+		} catch (IOException ioException) {
+			ioException.printStackTrace();
+		}
+		return xmlStr;
+	}
 	
 	/**
 	 * Update date tag, replace year-00-00 with year-01-01
 	 * 
 	 * @param xmlFile
 	 */
-	public Document replaceDate(Document doc) {
+	public Document replaceDate(String xmlStr) {
 		
 		String dateExpression = "00-00$";
 		Pattern pattern = Pattern.compile(dateExpression);
+		Document doc = XMLFileUtil.strToDocument(xmlStr);
 		NodeList dateList = doc.getElementsByTagName("date");
 		
 		for (int i = 0; i < dateList.getLength(); i++) {
@@ -93,24 +132,65 @@ public class XMLFileUtil {
 	}
 	
 	/**
-	 * Replace HTML Entities in XML files with real symbols
+	 * Replace HTML Entities in XML files with real symbols exclude ampersand
 	 * 
-	 * @param xmlFile
-	 * @param sourcePath
+	 * @param xmlStr
 	 */
-	public Document replaceHTMLEntity(File xmlFile, String sourcePath) {
+	public String replaceHTMLEntity(String xmlStr) {
+		
+		xmlStr = XMLFileUtil.fixDoubleEncoded(xmlStr);
+		StringBuilder xmlStrBuilder = new StringBuilder(xmlStr);
+		String htmlEntityExp = "&([a-zA-Z]{1,10});";
+		Pattern pattern = Pattern.compile(htmlEntityExp);
+		Matcher matcher = pattern.matcher(xmlStr);
+		while (matcher.find()) {
+			String htmlEntity = matcher.group(1).toLowerCase();
+			if (lookupMap.containsKey(htmlEntity) && !htmlEntity.equals("amp")) {
+				int start = matcher.start();
+				int end = matcher.end();
+				xmlStr = xmlStrBuilder.replace(start, end, lookupMap.get(htmlEntity)).toString();
+				matcher.reset(xmlStr);
+			}
+		}
+		xmlStr = xmlStrBuilder.toString();
+		return xmlStr;
+	}
+	
+	/**
+	 * Fix the HTML entity double encoded problem by replace &amp; with &
+	 * 
+	 * @param xmlStr
+	 * @return
+	 * 	Decoded XML string
+	 */
+	private static String fixDoubleEncoded(String xmlStr) {
+		
+		String escapesStr = "";
+		for (String htmlEntity : lookupMap.keySet()) {
+			escapesStr = htmlEntity + "|" + escapesStr;
+		}
+		String doubleEncodedExp = "&amp;(" + escapesStr + ");";
+		Pattern pattern = Pattern.compile(doubleEncodedExp);
+		Matcher matcher = pattern.matcher(xmlStr);
+		
+		while (matcher.find()) {
+			xmlStr = matcher.replaceAll("&$1;");
+		}
+		return xmlStr;
+	} 
+	
+	/**
+	 * Convert String to XML DOM
+	 * 
+	 * @param xmlStr
+	 * @return Document
+	 */
+	private static Document strToDocument(String xmlStr) {
 		
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		Document doc = null;
 		try {
 			DocumentBuilder builder = factory.newDocumentBuilder();
-			
-			String xmlStr = XMLFileUtil.getXMLStr(sourcePath);
-			
-			while (XMLFileUtil.checkHTMLEntity(xmlStr)) {
-				xmlStr = StringEscapeUtils.unescapeHtml3(xmlStr);
-			}
-			
 			InputSource inputSource = new InputSource();
 			inputSource.setCharacterStream(new StringReader(xmlStr));
 			doc = builder.parse(inputSource);
@@ -123,52 +203,6 @@ public class XMLFileUtil {
 			ioException.printStackTrace();
 		}
 		return doc;
-	}
-	
-	public void replceHTMLTag (Document doc) {
-			
-		NodeList linkList = doc.getElementsByTagName("a");
-		
-		System.out.println("Link length: " + linkList.getLength());	
-	}
-	
-	/**
-	 * Convert XML file to String
-	 * 
-	 * @param sourcePath
-	 * 	Path of the source XML file
-	 * @return String
-	 */
-	private static String getXMLStr(String sourcePath) {
-		
-		Path path = Paths.get(sourcePath);
-		String xmlStr = "";
-		try {
-			xmlStr = new String(Files.readAllBytes(path), "utf8");
-		} catch (IOException ioException) {
-			ioException.printStackTrace();
-		}
-		return xmlStr;
-	}
-	
-	/**
-	 * Check if there is HTML entity in the XML file
-	 * 
-	 * @param sourcePath
-	 * 	Path of the source XML file
-	 * @return boolean
-	 */
-	private static boolean checkHTMLEntity(String xmlStr) {
-		
-		boolean hasHTMLEntity = false;
-		String htmlExpression = "&[a-zA-Z]{1,10};";
-		Pattern pattern = Pattern.compile(htmlExpression);
-		Matcher matcher = pattern.matcher(xmlStr);
-		
-		if (matcher.find())
-			hasHTMLEntity = true;
-		
-		return hasHTMLEntity;
 	}
 	
 	/**

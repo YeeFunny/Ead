@@ -9,17 +9,14 @@ public class TestReadXMLFiles {
 		// TODO Auto-generated method stub
 		
 		XMLFileUtil xmlUtil = new XMLFileUtil();
-		String sourceDir = "//home//yifang//Documents//ead_file//";
-		String targetDir = "//home//yifang//Documents//test//";
+		String sourceDir = "C:\\Users\\yliu40\\Project\\Ead\\";
+		String targetDir = "C:\\Users\\yliu40\\Project\\finish\\";
 		
 		ArrayList<File> xmlFiles = xmlUtil.getXMLFiles(sourceDir);
-		File xmlFile;
 		Document doc;
 		for (int i = 0; i < xmlFiles.size(); i++) {
-			xmlFile = xmlFiles.get(i);
+			File xmlFile = xmlFiles.get(i);
 			String fileName = xmlFile.getName().trim();
-			doc = xmlUtil.replaceHTMLEntity(xmlFile, sourceDir + fileName);
-			XMLFileUtil.outputXMLFile(doc, targetDir + fileName);
 		}
 	}
 
