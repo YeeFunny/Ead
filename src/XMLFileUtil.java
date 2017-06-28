@@ -34,13 +34,13 @@ public class XMLFileUtil {
 		{"quot", "\""},			{"lt", "<"},			{"gt", ">"},
 		{"amp", "&"},			{"nbsp", "\u00A0"},  	{"iexcl", "\u00A1"},
 		{"cent", "\u00A2"},		{"pound", "\u00A3"}, 	{"curren", "\u00A4"},
-		{"yen", "\u00A5"},	  	{"sect", "\u00A7"},  	{"uml", "\u00A8"},
-		{"copy", "\u00A9"},   	{"ordf", "\u00AA"},  	{"ordm", "\u00BA"},
-		{"not", "\u00ac"},	  	{"shy", "\u00AD"},   	{"reg", "\u00AE"},
-		{"macr", "\u00AF"},	  	{"deg", "\u00B0"},   	{"plusmn", "\u00B1"},
-		{"acute", "\u00B4"},  	{"micro", "\u00B5"}, 	{"para", "\u00B6"},
-		{"middot", "\u00B7"}, 	{"cedil", "\u00B8"}, 	{"iquest", "\u00BF"},
-		{"times", "\u00D7"},  	{"divide", "\u00F7"}
+		{"yen", "\u00A5"},		{"sect", "\u00A7"},  	{"uml", "\u00A8"},
+		{"copy", "\u00A9"},		{"ordf", "\u00AA"},  	{"ordm", "\u00BA"},
+		{"not", "\u00ac"},		{"shy", "\u00AD"},   	{"reg", "\u00AE"},
+		{"macr", "\u00AF"},		{"deg", "\u00B0"},   	{"plusmn", "\u00B1"},
+		{"acute", "\u00B4"},	{"micro", "\u00B5"}, 	{"para", "\u00B6"},
+		{"middot", "\u00B7"},	{"cedil", "\u00B8"}, 	{"iquest", "\u00BF"},
+		{"times", "\u00D7"},	{"divide", "\u00F7"}
 	};
 	private static final HashMap<String, String> lookupMap;
     static {
