@@ -21,6 +21,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -60,26 +61,26 @@ public class XMLFileUtil {
 	};
 
 	/**
-	 * Get all XML files in the specified directory
+	 * Get all XML files' names in the specified directory
 	 * 
 	 * @param sourceDir
 	 * 	Path of the input directory
 	 * 	
 	 * @return
-	 * 	An arrayList with all XML files in the directory
+	 * 	An arrayList with all XML files' names in the directory
 	 */
-	public ArrayList<File> getXMLFiles(String sourceDir) {
+	public ArrayList<String> getXMLFiles(String sourceDir) {
 		
-		ArrayList<File> fileList = new ArrayList<File>();
+		ArrayList<String> fileList = new ArrayList<String>();
 		File file = new File(sourceDir);
 		
 		if (file.isDirectory()) {
 			File[] files = file.listFiles(xmlFilter);
 			for (File xmlFile : files)
-				fileList.add(xmlFile);
+				fileList.add(xmlFile.getName().trim());
 			
 		} else
-			fileList.add(file);
+			fileList.add(file.getName().trim());
 
 		return fileList;
 	}
@@ -108,11 +109,10 @@ public class XMLFileUtil {
 	 * 
 	 * @param xmlFile
 	 */
-	public Document replaceDate(String xmlStr) {
+	public Document replaceDate(Document doc) {
 		
 		String dateExpression = "00-00$";
 		Pattern pattern = Pattern.compile(dateExpression);
-		Document doc = XMLFileUtil.strToDocument(xmlStr);
 		NodeList dateList = doc.getElementsByTagName("date");
 		
 		for (int i = 0; i < dateList.getLength(); i++) {
@@ -122,17 +122,98 @@ public class XMLFileUtil {
 				NamedNodeMap dateAttrs = dateNode.getAttributes();
 				Node normalAttr = dateAttrs.getNamedItem("normal");
 				String normalValue = normalAttr.getTextContent().trim();
-				if (pattern.matcher(dateValue).find())
-					dateNode.setTextContent(dateValue.replace("00-00", "01-01"));
-				if (pattern.matcher(normalValue).find())
-					normalAttr.setTextContent(normalValue.replace("00-00", "01-01"));
+				Matcher matcher = pattern.matcher(dateValue);
+				if (matcher.find())
+					dateNode.setTextContent(matcher.replaceFirst("01-01"));
+				matcher.reset(normalValue);
+				if (matcher.find())
+					normalAttr.setTextContent(matcher.replaceFirst("01-01"));
 			}
 		}
 		return doc;
 	}
 	
 	/**
+	 * Add attribute xlink:title in extref tag and fix the attribute href
+	 * 
+	 * @param doc
+	 * @return
+	 */
+	public Document fixLinkAttr(Document doc) {
+		
+		String titleExp = "/([\\s\\S&&[^/]]*)$";
+		Pattern pattern = Pattern.compile(titleExp);
+		NodeList linkList = doc.getElementsByTagName("extref");
+		
+		for (int i = 0; i < linkList.getLength(); i++) {
+			Node linkNode = linkList.item(i);
+			if (linkNode.getNodeType() == Node.ELEMENT_NODE) {
+				NamedNodeMap linkAttrs = linkNode.getAttributes();
+				Node attrHref = linkAttrs.getNamedItem("href");
+				String attrHrefValue = attrHref.getTextContent().trim();
+				Matcher matcher = pattern.matcher(attrHrefValue);
+				if (matcher.find()) {
+					String lastOfHrefValue = matcher.group(1).trim();
+					lastOfHrefValue = lastOfHrefValue.replaceAll("\\s", "_");
+					attrHrefValue = matcher.replaceAll("/" + lastOfHrefValue);
+					attrHref.setTextContent(attrHrefValue);
+				}
+				((Element)linkNode).removeAttribute("href");
+				((Element)linkNode).setAttribute("xlink:href", attrHrefValue);
+				
+				String title = linkNode.getTextContent().trim();
+				matcher.reset(title);
+				if (matcher.find()) {
+					String attrTitleValue = matcher.group(1).trim();
+					((Element)linkNode).setAttribute("xlink:title", attrTitleValue);
+					linkNode.setTextContent("");
+				}
+			}
+		}
+		return doc;
+	}
+	
+	/**
+	 * Replace link tag with extref, delete i tag
+	 * 
+	 * @param xmlStr
+	 * @return
+	 */
+	public String fixHtmlTag(String xmlStr) {
+		
+		String linkTagExp = "<a(\\b[\\s\\S&&[^<>]]*>[\\s\\S]*?</)a>";
+		StringBuilder xmlStrBuilder = new StringBuilder(xmlStr);
+		Pattern pattern = Pattern.compile(linkTagExp);
+		Matcher matcher = pattern.matcher(xmlStr);
+		
+		while (matcher.find()) {
+			String textContent = matcher.group(1);
+			int start = matcher.start();
+			int end = matcher.end();
+			xmlStr = xmlStrBuilder.replace(start, end, "<extref" + textContent + "extref>").toString();
+			
+			matcher.reset(xmlStr);
+		}
+		
+		String iTagExp = "<i\\b[\\s\\S&&[^<>]]*>([\\s\\S]*?)</i>";
+		xmlStrBuilder = new StringBuilder(xmlStr);
+		pattern = Pattern.compile(iTagExp);
+		matcher = pattern.matcher(xmlStr);
+
+		while (matcher.find()) {
+			String textContent = matcher.group(1);
+			int start = matcher.start();
+			int end = matcher.end();
+			xmlStr = xmlStrBuilder.replace(start, end, textContent).toString();
+			matcher.reset(xmlStr);
+		}
+		
+		return xmlStr;
+	}
+	
+	/**
 	 * Replace HTML Entities in XML files with real symbols exclude ampersand
+	 * Also use XMLFileUtil.fixDoubleEncoded to fix double-encoded problem
 	 * 
 	 * @param xmlStr
 	 */
@@ -152,6 +233,22 @@ public class XMLFileUtil {
 				matcher.reset(xmlStr);
 			}
 		}
+		return xmlStr;
+	}
+	
+	
+	/**
+	 * Fix Special Collections WIKI URL
+	 * @param xmlStr
+	 * @return
+	 */
+	public String fixCollectionWikiURL(String xmlStr) {
+		
+		String collectionWikiURLExp = "http://scrc.swem.wm.edu/wiki";
+		Pattern pattern = Pattern.compile(collectionWikiURLExp);
+		Matcher matcher = pattern.matcher(xmlStr);
+		
+		xmlStr = matcher.replaceAll("http://scdbwiki.swem.wm.edu/wiki");
 		return xmlStr;
 	}
 	
@@ -184,7 +281,7 @@ public class XMLFileUtil {
 	 * @param xmlStr
 	 * @return Document
 	 */
-	private static Document strToDocument(String xmlStr) {
+	public Document strToDocument(String xmlStr) {
 		
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		Document doc = null;
@@ -209,7 +306,7 @@ public class XMLFileUtil {
 	 * @param doc
 	 * @param targetPath
 	 */
-	static void outputXMLFile(Document doc, String targetPath) {
+	public void outputXMLFile(Document doc, String targetPath) {
 		try {
 			TransformerFactory transformerFactory = TransformerFactory.newInstance();
 			Transformer transformer = transformerFactory.newTransformer();
