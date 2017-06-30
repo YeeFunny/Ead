@@ -7,8 +7,8 @@ public class Test {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		
-		String sourceDir = "C:\\Users\\yliu40\\Project\\Ead\\";
-		String targetDir = "C:\\Users\\yliu40\\Project\\extref\\";
+		String sourceDir = "/home/yifang/Documents/ead_file/";
+		String targetDir = "/home/yifang/Documents/test/";
 		XMLFileUtil xmlFileUtil = new XMLFileUtil();
 		
 		ArrayList<String> xmlFileNames = xmlFileUtil.getXMLFiles(sourceDir);
@@ -21,6 +21,7 @@ public class Test {
 			xmlStr = xmlFileUtil.fixCollectionWikiURL(xmlStr);
 			Document doc = xmlFileUtil.strToDocument(xmlStr);
 			doc = xmlFileUtil.fixLinkAttr(doc);
+			doc = xmlFileUtil.replaceDate(doc);
 			xmlFileUtil.outputXMLFile(doc, targetDir + xmlFileName);
 		}
 	}

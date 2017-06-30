@@ -148,26 +148,27 @@ public class XMLFileUtil {
 		for (int i = 0; i < linkList.getLength(); i++) {
 			Node linkNode = linkList.item(i);
 			if (linkNode.getNodeType() == Node.ELEMENT_NODE) {
+				String title = linkNode.getTextContent().trim();
+				Matcher matcher = pattern.matcher(title);
+				if (matcher.find()) {
+					String linkValue = matcher.group(1).trim();
+					linkValue = linkValue.replaceAll("[\\s]+", " ");
+					((Element)linkNode).setAttribute("xlink:title", linkValue);
+					linkNode.setTextContent("");
+				}
+				
 				NamedNodeMap linkAttrs = linkNode.getAttributes();
 				Node attrHref = linkAttrs.getNamedItem("href");
 				String attrHrefValue = attrHref.getTextContent().trim();
-				Matcher matcher = pattern.matcher(attrHrefValue);
+				matcher.reset(attrHrefValue);
 				if (matcher.find()) {
 					String lastOfHrefValue = matcher.group(1).trim();
-					lastOfHrefValue = lastOfHrefValue.replaceAll("\\s", "_");
+					lastOfHrefValue = lastOfHrefValue.replaceAll("[\\s]+", " ").replaceAll(" ", "_");
 					attrHrefValue = matcher.replaceAll("/" + lastOfHrefValue);
 					attrHref.setTextContent(attrHrefValue);
 				}
 				((Element)linkNode).removeAttribute("href");
 				((Element)linkNode).setAttribute("xlink:href", attrHrefValue);
-				
-				String title = linkNode.getTextContent().trim();
-				matcher.reset(title);
-				if (matcher.find()) {
-					String attrTitleValue = matcher.group(1).trim();
-					((Element)linkNode).setAttribute("xlink:title", attrTitleValue);
-					linkNode.setTextContent("");
-				}
 			}
 		}
 		return doc;
